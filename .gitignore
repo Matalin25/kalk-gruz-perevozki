@@ -1,0 +1,14 @@
+# Временные/тестовые файлы
+_test*
+*.tmp
+*.log
+
+# Системные файлы ОС
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# Редакторы / IDE
+.vscode/
+.idea/
+*.swp

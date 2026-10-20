@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Калькулятор сборных грузоперевозок</title>
+  <meta name="description" content="Расчёт стоимости доставки сборного груза. Устанавливается на компьютер и сайт." />
+  <meta name="theme-color" content="#0a0e14" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="assets/img/icon-192.png" />
+  <link rel="stylesheet" href="assets/css/styles.css" />
+</head>
+<body>
+  <header class="app-header">
+    <div class="brand">
+      <div class="brand-logo">🚚</div>
+      <div class="brand-text">
+        <h1>Калькулятор сборных грузоперевозок</h1>
+        <p>Расчёт стоимости доставки сборного груза</p>
+      </div>
+    </div>
+    <div class="header-spacer"></div>
+    <div class="data-status" id="dataStatus" title="Источник тарифов">
+      <span class="dot" id="dataDot"></span>
+      <span id="dataStatusText">Данные загружены</span>
+    </div>
+    <button class="icon-btn" id="refreshBtn" title="Обновить тарифы с Яндекс.Диска" aria-label="Обновить тарифы">⟳</button>
+  </header>
+
+  <main class="layout">
+    <!-- ЛЕВАЯ КОЛОНКА: форма -->
+    <section>
+      <div class="card">
+        <h2 class="section-title"><span class="num">1</span> Маршрут</h2>
+        <div class="grid-2">
+          <div class="field">
+            <label for="from">Город отправления</label>
+            <select id="from"></select>
+          </div>
+          <div class="field">
+            <label for="to">Город доставки</label>
+            <select id="to"></select>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2 class="section-title"><span class="num">2</span> Параметры груза</h2>
+        <div class="grid-2">
+          <div class="field">
+            <label for="weight">Вес груза, кг</label>
+            <div class="input-suffix">
+              <input type="number" id="weight" min="0" step="0.1" placeholder="150" />
+              <span>кг</span>
+            </div>
+          </div>
+          <div class="field">
+            <label for="volume">Объём груза, м³</label>
+            <div class="input-suffix">
+              <input type="number" id="volume" min="0" step="0.01" placeholder="0.8" />
+              <span>м³</span>
+            </div>
+          </div>
+        </div>
+
+        <label class="hint-row">Габариты одного места (м) — объём подставится автоматически</label>
+        <div class="grid-3" style="margin-top:8px">
+          <div class="field" style="margin-bottom:10px">
+            <label for="len">Длина</label>
+            <input type="number" id="len" min="0" step="0.01" placeholder="1.20" />
+          </div>
+          <div class="field" style="margin-bottom:10px">
+            <label for="wid">Ширина</label>
+            <input type="number" id="wid" min="0" step="0.01" placeholder="0.80" />
+          </div>
+          <div class="field" style="margin-bottom:10px">
+            <label for="hei">Высота</label>
+            <input type="number" id="hei" min="0" step="0.01" placeholder="0.80" />
+          </div>
+        </div>
+        <div class="field">
+          <label for="places">Количество мест</label>
+          <input type="number" id="places" min="1" step="1" value="1" />
+        </div>
+        <div class="hint-row" id="volCalcHint"></div>
+      </div>
+
+      <div class="card">
+        <h2 class="section-title"><span class="num">3</span> Тип груза</h2>
+        <div class="chips" id="cargoChips"></div>
+        <div class="hint-row" id="cargoHint" style="margin-top:12px"></div>
+      </div>
+
+      <div class="card">
+        <h2 class="section-title"><span class="num">4</span> Дополнительные услуги</h2>
+        <div class="services-list" id="servicesList"></div>
+      </div>
+    </section>
+
+    <!-- ПРАВАЯ КОЛОНКА: результат -->
+    <aside>
+      <div class="card result-card">
+        <div class="price-hero">
+          <div class="label">Итоговая стоимость</div>
+          <div class="amount" id="totalAmount">0 ₽</div>
+          <div class="route" id="routeLabel">Выберите маршрут и параметры груза</div>
+          <div class="badges" id="resultBadges"></div>
+        </div>
+
+        <div class="breakdown" id="breakdown">
+          <div class="empty">Введите параметры груза слева, чтобы увидеть расчёт.</div>
+        </div>
+
+        <div class="field" style="margin-top:18px; margin-bottom:14px;">
+          <label style="display:flex; align-items:center; gap:10px; cursor:pointer; margin:0;">
+            <input type="checkbox" id="onlineOrder" checked style="width:auto; accent-color:#3d8bfd;" />
+            <span>Оформить онлайн — скидка <b id="discountPctLabel">12%</b></span>
+          </label>
+        </div>
+
+        <button class="btn" id="submitBtn">📨 Отправить заявку</button>
+        <div class="hint-row" style="text-align:center; margin-top:10px;" id="sourceHint"></div>
+      </div>
+    </aside>
+  </main>
+
+  <footer class="footer">
+    Сборный груз · расчёт ориентировочный · тарифы обновляются с
+    <a href="https://disk.yandex.ru/i/I4D17FNmUf7uqw" target="_blank" rel="noopener">Яндекс.Диска</a>
+  </footer>
+
+  <!-- МОДАЛЬНОЕ ОКНО: оформление онлайн-заявки -->
+  <div class="modal-backdrop" id="modal">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <div class="modal-head">
+        <div class="brand-logo" style="width:36px;height:36px;font-size:18px;border-radius:10px;">📝</div>
+        <div>
+          <h2 id="modalTitle">Оформление онлайн-заявки</h2>
+          <p>Заполните контакты — мы подтвердим расчёт и заберём груз</p>
+        </div>
+        <div class="header-spacer"></div>
+        <button class="icon-btn" id="modalClose" aria-label="Закрыть">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="order-summary" id="orderSummary"></div>
+
+        <h2 class="section-title"><span class="num">1</span> Описание груза</h2>
+        <div class="form-grid">
+          <div class="field span-2">
+            <label for="oName">Наименование груза</label>
+            <input type="text" id="oName" placeholder="Например: бытовая техника" />
+          </div>
+          <div class="field">
+            <label for="oDims">Габариты (Д×Ш×В), м</label>
+            <input type="text" id="oDims" readonly />
+          </div>
+          <div class="field">
+            <label for="oPlaces">Количество мест</label>
+            <input type="text" id="oPlaces" readonly />
+          </div>
+          <div class="field">
+            <label for="oWeight">Общий вес, кг</label>
+            <input type="text" id="oWeight" readonly />
+          </div>
+          <div class="field">
+            <label for="oVolume">Общий объём, м³</label>
+            <input type="text" id="oVolume" readonly />
+          </div>
+          <div class="field span-2">
+            <label for="oNotes">Примечания к заявке</label>
+            <textarea id="oNotes" placeholder="Особые условия, хрупкий груз, требования к погрузке…"></textarea>
+          </div>
+        </div>
+
+        <h2 class="section-title" style="margin-top:22px"><span class="num">2</span> Информация о перевозке</h2>
+        <div class="form-grid">
+          <div class="field">
+            <label for="oDate">Дата отправки</label>
+            <input type="date" id="oDate" />
+          </div>
+          <div class="field">
+            <label for="oTime">Желаемое время</label>
+            <input type="time" id="oTime" />
+          </div>
+          <div class="field">
+            <label for="oPay">Оплата услуг</label>
+            <select id="oPay">
+              <option>Безналичный расчёт</option>
+              <option>Наличные</option>
+              <option>Оплата картой</option>
+              <option>По договору (отсрочка)</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="oEmail">E-mail клиента (копия заявки, необязательно)</label>
+            <input type="email" id="oEmail" placeholder="mail@example.ru" />
+          </div>
+        </div>
+
+        <h2 class="section-title" style="margin-top:22px"><span class="num">3</span> Отправитель</h2>
+        <div class="form-grid">
+          <div class="field"><label for="sName">Контактное лицо</label><input type="text" id="sName" placeholder="Иван Иванов" /></div>
+          <div class="field"><label for="sPhone">Телефон</label><input type="tel" id="sPhone" placeholder="+7 (___) ___-__-__" /></div>
+          <div class="field span-2"><label for="sAddr">Адрес отправителя</label><input type="text" id="sAddr" placeholder="Город, улица, дом" /></div>
+        </div>
+
+        <h2 class="section-title" style="margin-top:22px"><span class="num">4</span> Получатель</h2>
+        <div class="form-grid">
+          <div class="field"><label for="rName">Контактное лицо</label><input type="text" id="rName" placeholder="Пётр Петров" /></div>
+          <div class="field"><label for="rPhone">Телефон</label><input type="tel" id="rPhone" placeholder="+7 (___) ___-__-__" /></div>
+          <div class="field span-2"><label for="rAddr">Адрес получателя</label><input type="text" id="rAddr" placeholder="Город, улица, дом" /></div>
+        </div>
+
+        <label style="display:flex; align-items:center; gap:10px; margin-top:18px; cursor:pointer; color:var(--text-dim); font-size:13.5px;">
+          <input type="checkbox" id="oCopy" checked style="width:auto; accent-color:#3d8bfd;" />
+          Отправить копию заявки на электронную почту
+        </label>
+      </div>
+
+      <div class="modal-foot">
+        <button class="btn secondary" id="cancelBtn" style="flex:0 0 150px;">Отмена</button>
+        <button class="btn" id="sendBtn" style="flex:1;">Отправить заявку</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ПОДТВЕРЖДЕНИЕ ОТПРАВКИ -->
+  <div class="modal-backdrop" id="successModal">
+    <div class="modal success-modal" role="dialog" aria-modal="true" aria-labelledby="successTitle">
+      <div class="modal-body success-body">
+        <div class="success-check">
+          <svg viewBox="0 0 52 52" aria-hidden="true">
+            <circle class="success-check-circle" cx="26" cy="26" r="24" fill="none" />
+            <path class="success-check-mark" fill="none" d="M14 27 l8 8 l16 -18" />
+          </svg>
+        </div>
+        <h2 id="successTitle">Ваша заявка успешно отправлена!</h2>
+        <p class="success-sub">Мы получили заявку и свяжемся с вами в ближайшее время для подтверждения расчёта и условий доставки.</p>
+        <div class="success-ref">Номер заявки: <b id="successRef">—</b></div>
+        <div class="success-summary" id="successSummary"></div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn" id="successClose" style="flex:1;">Готово</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <!-- Скрытая форма для приёма заявок (Netlify Forms). Не удалять! -->
+  <form name="order" method="POST" data-netlify="true" netlify-honeypot="bot-field" hidden>
+    <input type="text" name="bot-field" />
+    <input type="text" name="ref" />
+    <input type="text" name="route" />
+    <input type="text" name="cargo" />
+    <input type="text" name="services" />
+    <input type="text" name="total" />
+    <input type="text" name="sender" />
+    <input type="text" name="recipient" />
+    <input type="email" name="clientEmail" />
+    <textarea name="message"></textarea>
+  </form>
+
+  <script src="assets/js/xlsx.full.min.js"></script>
+  <script src="assets/js/data.js"></script>
+  <script src="assets/js/app.js"></script>
+</body>
+</html>
